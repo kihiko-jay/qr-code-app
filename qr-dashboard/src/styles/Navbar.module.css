@@ -1,0 +1,23 @@
+/* styles/Navbar.module.css */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    background: #333;
+    padding: 10px 20px;
+    color: white;
+}
+
+.navLinks {
+    display: flex;
+    gap: 15px;
+}
+
+.navLink {
+    text-decoration: none;
+    color: white;
+    font-size: 16px;
+}
+
+.navLink:hover {
+    text-decoration: underline;
+}

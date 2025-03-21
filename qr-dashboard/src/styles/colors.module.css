@@ -1,0 +1,25 @@
+:root {
+    /* Primary Colors */
+    --primary-500: #2563eb;    /* Main brand color */
+    --primary-600: #1d4ed8;    /* Hover state */
+    --primary-100: #dbeafe;    /* Light background */
+  
+    /* Secondary Colors */
+    --secondary-500: #4f46e5;  /* Secondary brand color */
+    --secondary-600: #4338ca;
+  
+    /* Accent Colors */
+    --accent-500: #2dd4bf;     /* For CTAs and highlights */
+    --accent-600: #0d9488;
+  
+    /* Neutrals */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  
+    /* Feedback Colors */
+    --success-500: #10b981;
+    --error-500: #ef4444;
+  }

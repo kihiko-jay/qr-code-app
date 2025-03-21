@@ -1,0 +1,127 @@
+.dashboardContainer {
+    display: flex;
+    min-height: 100vh;
+    background-color: #121212;
+    color: white;
+  }
+  
+  .sidebar {
+    width: 280px;
+    background: #1e1e1e;
+    padding: 2rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .sidebar h2 {
+    color: #00ff88;
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .sidebar li {
+    padding: 1rem;
+    margin: 0.5rem 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .sidebar li:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .sidebar li.active {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+    font-weight: 500;
+  }
+  
+  .content {
+    flex: 1;
+    padding: 2rem;
+    background: #121212;
+  }
+  
+  .content h2 {
+    color: #00ff88;
+    margin-bottom: 2rem;
+    font-size: 1.75rem;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  
+  th {
+    background: rgba(0, 255, 136, 0.1);
+    color: #00ff88;
+    padding: 1rem;
+    text-align: left;
+  }
+  
+  td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-right: 0.5rem;
+  }
+  
+  button:first-of-type {
+    background: #00ff88;
+    color: #121212;
+  }
+  
+  button:last-of-type {
+    background: #ff4757;
+    color: white;
+  }
+  
+  button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  
+  @media (max-width: 768px) {
+    .dashboardContainer {
+      flex-direction: column;
+    }
+  
+    .sidebar {
+      width: 100%;
+      padding: 1rem;
+    }
+  
+    .content {
+      padding: 1rem;
+    }
+  
+    table {
+      display: block;
+      overflow-x: auto;
+    }
+  }
