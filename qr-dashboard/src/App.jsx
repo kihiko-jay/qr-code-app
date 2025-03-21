@@ -6,7 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import PaymentPage from "./components/PaymentPage";
 import Header from "./components/Header";
 import QrGenerator from "./components/QrGenerator";
-import MyQrCodes from "./components/MyQrcodes";
+import MyQrCodes from "./components/MyQrCodes";
 import AdminUsers from "./pages/AdminUsers";
 import AdminQrCodes from "./pages/AdminQrCodes";
 import CombinedQrGenerator from "./components/CombinedQrGenerator";

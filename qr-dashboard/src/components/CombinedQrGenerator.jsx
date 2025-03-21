@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-import styles from "../styles/CombinedQRGenerator.module.css";
+//import styles from "../styles/CombinesQrGenerator.module.css";
 
 const CombinedQRGenerator = () => {
   const navigate = useNavigate();

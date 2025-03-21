@@ -1,7 +1,7 @@
 // HomePage.jsx
 import { Link } from "react-router-dom";
 import styles from "../styles/Homepage.module.css";
-import heroImage from "../assets/HeroImage.webp";
+import heroImage from "../Assets/HeroImage.webp";
 import colors from "../styles/colors.module.css"
 const HomePage = () => {
   return (

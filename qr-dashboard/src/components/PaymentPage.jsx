@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styles from "../styles/PaymentPage.module.css";
-import Logo from "../assets/logo.png"; // Update with your logo path
+//import Logo from "../a; // Update with your logo path
 
 const PaymentPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("mpesa");
