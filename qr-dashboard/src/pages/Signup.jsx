@@ -11,12 +11,14 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+   console.log(apiUrl);
+   console.log(import.meta.env); 
+   
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
+    
     if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim()) {
       setError("All fields are required");
       return;
@@ -29,7 +31,7 @@ const Signup = () => {
 
     setLoading(true);
     
-    try {
+    try {console.log(apiUrl)
       const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -39,6 +41,7 @@ const Signup = () => {
           password: formData.password.trim(),
           role: "paid"
         }),
+        credentials:"include" //important for cookies
       });
 
       const data = await response.json();
@@ -54,7 +57,7 @@ const Signup = () => {
       setLoading(false);
     }
   };
-
+  
   const handleChange = (e) => {
     setFormData({
       ...formData,

@@ -19,7 +19,7 @@ const PrivateRoute = ({ children }) => {
 // Admin route component
 const AdminRoute = ({ children }) => {
   const user = JSON.parse(sessionStorage.getItem('user'));
-  return user?.role === 'admin' ? children : <Navigate to="/dashboard" replace />;
+  return user?.role === 'admin' ? children : <Navigate to="/combinedQrGenerator" replace />;
 };
 
 function App() {
@@ -32,7 +32,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/payment" element={<PaymentPage />} />
-
+        <Route path="/combinedQrGenerator" element={<CombinedQrGenerator />} />
         {/* Protected dashboard routes */}
         <Route path="/dashboard" element={
           <PrivateRoute>
@@ -43,10 +43,10 @@ function App() {
             <>
               <QrGenerator />
               <MyQrCodes />
-              <CombinedQrGenerator/>
+              
             </>
           } />
-          <Route path="combined" element={<CombinedQrGenerator/>}/>
+          <Route path="combinedQrGenerator" element={<CombinedQrGenerator/>}/>
           <Route path="generate" element={<QrGenerator />} />
           <Route path="my-qrcodes" element={<MyQrCodes />} />
         </Route>

@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-//import styles from "../styles/CombinesQrGenerator.module.css";
+import styles from "../styles/CombinedQrGenerator.module.css";
+
+const DEFAULT_USER = { role: "paid" };
 
 const CombinedQRGenerator = () => {
   const navigate = useNavigate();
@@ -16,13 +18,13 @@ const CombinedQRGenerator = () => {
     logoPreview: ""
   });
 
-  // Safe JSON parsing with default value
   const getUserData = () => {
     try {
-      return JSON.parse(localStorage.getItem("user") || { role: "freemium" });
+      const userData = localStorage.getItem("user");
+      return userData ? JSON.parse(userData) : DEFAULT_USER;
     } catch (error) {
       console.error("Error parsing user data:", error);
-      return { role: "freemium" };
+      return DEFAULT_USER;
     }
   };
 
@@ -59,7 +61,16 @@ const CombinedQRGenerator = () => {
 
   const handleGenerate = async (e) => {
     e.preventDefault();
+    
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setState(prev => ({ ...prev, error: "Not authenticated. Please login again." }));
+      return;
+    }
+
     if (!validateInput(state.qrData)) return;
+
+  // Removed duplicate handleGenerate function definition
 
     setState(prev => ({ ...prev, loading: true, error: null }));
 
@@ -112,7 +123,11 @@ const CombinedQRGenerator = () => {
   };
 
   const handleGenerationError = (error) => {
+    console.error("Full error object:", error);
+    console.error("Error response:", error.response);
+    
     const errorMessage = error.response?.data?.message ||
+      error.response?.statusText ||
       error.message ||
       "Failed to generate QR code. Please try again.";
     
@@ -122,7 +137,6 @@ const CombinedQRGenerator = () => {
       generatedUrl: ""
     }));
   };
-
   const handleDownload = () => {
     if (!state.generatedUrl) return;
     

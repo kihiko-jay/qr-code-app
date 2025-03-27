@@ -282,3 +282,22 @@ button:hover {
     text-align: center;
     margin: 2rem 0;
 }
+.lockoutWarning {
+  color: #ff6b6b;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.required {
+  color: #ff6b6b;
+  margin-left: 0.2rem;
+}
+
+[aria-busy="true"] {
+  opacity: 0.8;
+}
+
+[aria-disabled="true"] {
+  pointer-events: none;
+  opacity: 0.6;
+}

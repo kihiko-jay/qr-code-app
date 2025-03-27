@@ -3,69 +3,147 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import helmet from "helmet";
 
-// Configuration
+// Load environment variables
 dotenv.config();
 const PORT = process.env.PORT || 5000;
 
-// Import routes
+// Configure allowed origins
+const allowedOrigins = [
+  process.env.CLIENT_URLS, 
+  "http://localhost:5173",
+  "https://*.app.github.dev" // Wildcard for all GitHub Codespaces
+].filter(Boolean);
+
+console.log("🌍 Allowed Origins:", allowedOrigins);
+
+// Create Express app
+const app = express();
+
+// =====================
+// SECURITY MIDDLEWARE
+// =====================
+app.use(helmet());
+app.use(express.json({ limit: "10kb" }));
+app.use(cookieParser());
+
+// =====================
+// CORS CONFIGURATION
+// =====================
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    // Special handling for GitHub Codespaces dynamic URLs
+    if (origin.includes(".app.github.dev")) {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚨 CORS Blocked: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  maxAge: 86400
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+//confirm loggin
+app.use((req, res, next) => {
+    console.log('Incoming Headers:', req.headers);
+    console.log('Request Origin:', req.get('origin'));
+    next();
+  });
+//
+// =====================
+// REQUEST LOGGING
+// =====================
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// =====================
+// ROUTES
+// =====================
 import authRoutes from "./routes/authRoutes.js";
 import campaignRoutes from "./routes/campaignRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import qrCodeRoutes from "./routes/qrCodeRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 
-// Create Express app
-const app = express();
-
-// Middleware
-app.use(express.json());
-app.use(cookieParser());
-app.use(cors({
-    origin: process.env.CLIENT_URLS?.split(",") || [
-        "http://localhost:5173",
-        "http://localhost:5174"
-    ],
-    credentials: true
-}));
-
-// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/campaign", campaignRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/qrCode", qrCodeRoutes);
 app.use("/api/admin", adminRoutes);
 
-// Health Check
+// =====================
+// HEALTH CHECK
+// =====================
 app.get("/", (req, res) => {
-    res.status(200).json({ status: "OK", message: "QR Code App API is Running!" });
+  res.status(200).json({
+    status: "OK",
+    service: "QR Code Generator API",
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Error Handling Middleware
+// =====================
+// ERROR HANDLING
+// =====================
 app.use((err, req, res, next) => {
-    console.error("Server error:", err.stack);
-    res.status(500).json({ message: "Internal Server Error" });
+  console.error("🔥 Error:", err.stack);
+  
+  const statusCode = err.message.includes("CORS") ? 403 : 500;
+  const response = {
+    error: statusCode === 403 ? "Forbidden" : "Internal Server Error",
+    message: err.message
+  };
+  
+  if (process.env.NODE_ENV === "production") {
+    delete response.stack;
+  } else {
+    response.stack = err.stack;
+  }
+  
+  res.status(statusCode).json(response);
 });
-//matrias
-console.log("Backend API URL:", process.env.PORT);
 
-//matrials 
-
-// Database Connection & Server Start
+// =====================
+// DATABASE CONNECTION
+// =====================
 const connectDB = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("Connected to MongoDB");
-        
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-            console.log(`Environment: ${process.env.NODE_ENV || "development"}`);
-        });
-    } catch (err) {
-        console.error("MongoDB connection error:", err.message);
-        process.exit(1);
-    }
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 30000,
+      retryWrites: true,
+      w: "majority"
+    });
+    
+    console.log("✅ MongoDB Connected");
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🛡️  CORS Enabled for: ${allowedOrigins.join(", ")}`);
+      console.log(`⚙️  Environment: ${process.env.NODE_ENV}`);
+    });
+    
+  } catch (err) {
+    console.error("❌ MongoDB Connection Failed:", err.message);
+    process.exit(1);
+  }
 };
 
-// Start application
 connectDB();

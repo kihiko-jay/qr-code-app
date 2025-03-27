@@ -18,13 +18,14 @@ if (!process.env.JWT_SECRET) {
 
 // ✅ Register New User
 router.post("/register", async (req, res) => {
+  console.log("Incoming Request Body:", req.body);
   try {
     let { username, email, password, role } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
-
+    
     email = email.toLowerCase().trim();
     username = username.trim();
 
