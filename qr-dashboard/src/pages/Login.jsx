@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import styles from "../styles/auth.module.css";
@@ -6,6 +6,7 @@ import styles from "../styles/auth.module.css";
 // Constants
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 300000; // 5 minutes in milliseconds
 const API_TIMEOUT = 15000; // 15 seconds
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -19,19 +20,23 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [timeoutActive, setTimeoutActive] = useState(false);
+  const [remainingTime, setRemainingTime] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Check for existing token on initial render
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
+    const token = localStorage.getItem("authToken");
     if (token) {
-      navigate("/combinedQrGenerator", { replace: true });
+      navigate(location.state?.from || "/combinedQrGenerator", { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, location]);
 
   // Reset error when inputs change
   useEffect(() => {
-    if (error) setError("");
+    if (error && (credentials.email || credentials.password)) {
+      setError("");
+    }
   }, [credentials.email, credentials.password]);
 
   // Handle lockout timeout
@@ -39,19 +44,28 @@ const Login = () => {
     let timer;
     if (attempts >= MAX_ATTEMPTS) {
       setTimeoutActive(true);
-      timer = setTimeout(() => {
-        setAttempts(0);
-        setTimeoutActive(false);
-      }, 300000); // 5 minute lockout
+      let timeLeft = LOCKOUT_TIME / 1000; // Convert to seconds
+      
+      timer = setInterval(() => {
+        timeLeft -= 1;
+        setRemainingTime(timeLeft);
+        
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          setAttempts(0);
+          setTimeoutActive(false);
+        }
+      }, 1000);
     }
-    return () => clearTimeout(timer);
+    
+    return () => clearInterval(timer);
   }, [attempts]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setCredentials(prev => ({
       ...prev,
-      [name]: name === "password" ? value : value.trim() // Only trim email
+      [name]: name === "password" ? value : value.trim()
     }));
   };
 
@@ -83,7 +97,7 @@ const Login = () => {
     
     try {
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 
-                    process.env.REACT_APP_API_URL || 
+                    process.env.REACT_APP_API_BASE_URL || 
                     'http://localhost:5000';
 
       const controller = new AbortController();
@@ -98,9 +112,7 @@ const Login = () => {
         {
           headers: { 
             "Content-Type": "application/json",
-           
           },
-          withCredentials: true,
           signal: controller.signal
         }
       );
@@ -111,14 +123,14 @@ const Login = () => {
         throw new Error("Authentication failed: No token received");
       }
 
-      // Store authentication data
-      sessionStorage.setItem("token", response.data.token);
+      // Store authentication data consistently
+      localStorage.setItem("authToken", response.data.token);
       if (response.data.user) {
         localStorage.setItem("user", JSON.stringify(response.data.user));
       }
 
-      // Force full page reload to reset application state
-      window.location.href = "/combinedQrGenerator";
+      // Redirect to intended location or default page
+      navigate(location.state?.from || "/combinedQrGenerator", { replace: true });
 
     } catch (error) {
       const newAttempts = attempts + 1;
@@ -127,7 +139,17 @@ const Login = () => {
       let errorMessage = "Login failed. Please try again.";
       
       if (error.response) {
-        errorMessage = error.response.data?.message || errorMessage;
+        // Handle specific error codes from backend
+        switch (error.response.data?.code) {
+          case "INVALID_CREDENTIALS":
+            errorMessage = "Invalid email or password";
+            break;
+          case "ACCOUNT_LOCKED":
+            errorMessage = "Account temporarily locked";
+            break;
+          default:
+            errorMessage = error.response.data?.message || errorMessage;
+        }
       } else if (error.name === "AbortError") {
         errorMessage = "Request timeout. Please check your connection.";
       } else if (error.message.includes("Network Error")) {
@@ -135,10 +157,17 @@ const Login = () => {
       }
 
       console.error("Login error:", error);
-      setError(`${errorMessage} (Attempt ${newAttempts}/${MAX_ATTEMPTS})`);
+      setError(`${errorMessage} ${newAttempts < MAX_ATTEMPTS ? `(Attempt ${newAttempts}/${MAX_ATTEMPTS})` : ""}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Format remaining lockout time
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   return (
@@ -156,7 +185,7 @@ const Login = () => {
               {error}
               {timeoutActive && (
                 <div className={styles.lockoutWarning}>
-                  Account temporarily locked. Please try again later.
+                  Account locked. Try again in {formatTime(remainingTime)}
                 </div>
               )}
             </div>
@@ -205,6 +234,7 @@ const Login = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   disabled={loading || timeoutActive}
+                  tabIndex={-1} // Prevent tab focus on this button
                 >
                   {showPassword ? "👁️" : "🔒"}
                 </button>

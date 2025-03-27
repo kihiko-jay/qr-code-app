@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import styles from "../styles/CombinedQrGenerator.module.css";
 
-const DEFAULT_USER = { role: "paid" };
-
 const CombinedQRGenerator = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [state, setState] = useState({
     qrData: "",
     color: "#000000",
@@ -18,62 +17,141 @@ const CombinedQRGenerator = () => {
     logoPreview: ""
   });
 
+  // Get user data with proper error handling
   const getUserData = () => {
     try {
       const userData = localStorage.getItem("user");
-      return userData ? JSON.parse(userData) : DEFAULT_USER;
+      if (!userData) return { role: "free" };
+      return JSON.parse(userData);
     } catch (error) {
       console.error("Error parsing user data:", error);
-      return DEFAULT_USER;
+      return { role: "free" };
     }
   };
 
   const user = getUserData();
   const isPremium = user.role === "premium";
 
+  // Clean up object URLs
   useEffect(() => {
     return () => {
       if (state.logoPreview) URL.revokeObjectURL(state.logoPreview);
     };
   }, [state.logoPreview]);
 
+  // Check authentication on mount
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login", { 
+        state: { from: location.pathname },
+        replace: true 
+      });
+    }
+  }, [navigate, location]);
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Validate file type
     if (!file.type.startsWith("image/")) {
-      setState(prev => ({ ...prev, error: "Invalid file type - only images allowed" }));
+      setState(prev => ({ ...prev, error: "Only image files are allowed (JPEG, PNG)" }));
       return;
     }
 
+    // Validate file size
     if (file.size > 2 * 1024 * 1024) {
-      setState(prev => ({ ...prev, error: "File size must be less than 2MB" }));
+      setState(prev => ({ 
+        ...prev, 
+        error: "File size must be less than 2MB" 
+      }));
       return;
     }
 
+    // Create preview and update state
+    const previewUrl = URL.createObjectURL(file);
     setState(prev => ({
       ...prev,
       logo: file,
-      logoPreview: URL.createObjectURL(file),
+      logoPreview: previewUrl,
       error: null
+    }));
+  };
+
+  const validateInput = (input) => {
+    if (!input.trim()) {
+      setState(prev => ({ 
+        ...prev, 
+        error: "Please enter content for the QR code" 
+      }));
+      return false;
+    }
+    
+    // Optional URL validation
+    try {
+      new URL(input);
+    } catch (_) {
+      if (!confirm("The input doesn't look like a URL. Generate anyway?")) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  const handleGenerationError = (error) => {
+    console.error("QR Generation Error:", {
+      error: error,
+      response: error.response,
+      config: error.config
+    });
+
+    // Handle token expiration
+    if (error.response?.status === 401) {
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      navigate("/login", { 
+        state: { 
+          from: location.pathname,
+          message: "Session expired. Please login again."
+        },
+        replace: true
+      });
+      return;
+    }
+
+    // Handle specific error messages
+    const errorMessage = error.response?.data?.message ||
+      error.message ||
+      "QR code generation failed. Please try again.";
+
+    setState(prev => ({
+      ...prev,
+      error: errorMessage,
+      generatedUrl: ""
     }));
   };
 
   const handleGenerate = async (e) => {
     e.preventDefault();
     
-    const token = localStorage.getItem("token");
+    // Check authentication
+    const token = localStorage.getItem("authToken");
     if (!token) {
-      setState(prev => ({ ...prev, error: "Not authenticated. Please login again." }));
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 
+    // Validate input
     if (!validateInput(state.qrData)) return;
 
-  // Removed duplicate handleGenerate function definition
+    // Prevent duplicate submissions
+    if (state.loading) return;
 
     setState(prev => ({ ...prev, loading: true, error: null }));
 
+    // Prepare form data
     const formData = new FormData();
     formData.append("data", state.qrData);
     
@@ -84,11 +162,11 @@ const CombinedQRGenerator = () => {
 
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/qrcode/generate`,
+        `${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/qrcode/generate`,
         formData,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
           },
           timeout: 30000
@@ -97,46 +175,18 @@ const CombinedQRGenerator = () => {
 
       setState(prev => ({
         ...prev,
-        generatedUrl: response.data.qrImageUrl,
+        generatedUrl: response.data.qrUrl || response.data.qrImageUrl,
+        loading: false,
         error: null
       }));
-    } catch (err) {
-      handleGenerationError(err);
+
+    } catch (error) {
+      handleGenerationError(error);
     } finally {
       setState(prev => ({ ...prev, loading: false }));
     }
   };
 
-  const validateInput = (input) => {
-    if (!input.trim()) {
-      setState(prev => ({ ...prev, error: "Please enter valid content for the QR code" }));
-      return false;
-    }
-    
-    try {
-      new URL(input);
-    } catch (_) {
-      if (!confirm("The input doesn't look like a valid URL. Generate anyway?")) return false;
-    }
-    
-    return true;
-  };
-
-  const handleGenerationError = (error) => {
-    console.error("Full error object:", error);
-    console.error("Error response:", error.response);
-    
-    const errorMessage = error.response?.data?.message ||
-      error.response?.statusText ||
-      error.message ||
-      "Failed to generate QR code. Please try again.";
-    
-    setState(prev => ({
-      ...prev,
-      error: errorMessage,
-      generatedUrl: ""
-    }));
-  };
   const handleDownload = () => {
     if (!state.generatedUrl) return;
     
@@ -156,13 +206,28 @@ const CombinedQRGenerator = () => {
       if (navigator.share) {
         await navigator.share({
           title: "Check out this QR Code",
+          text: "Scan this QR code",
           url: state.generatedUrl
         });
       } else {
-        window.open(`https://wa.me/?text=${encodeURIComponent(state.generatedUrl)}`, "_blank");
+        // Fallback for browsers without Web Share API
+        await navigator.clipboard.writeText(state.generatedUrl);
+        setState(prev => ({ 
+          ...prev, 
+          error: "Link copied to clipboard!" 
+        }));
+        setTimeout(() => {
+          setState(prev => ({ ...prev, error: null }));
+        }, 2000);
       }
     } catch (error) {
-      console.error("Sharing failed:", error);
+      if (error.name !== 'AbortError') {
+        console.error("Sharing failed:", error);
+        setState(prev => ({ 
+          ...prev, 
+          error: "Sharing failed. Please try again." 
+        }));
+      }
     }
   };
 
@@ -175,7 +240,7 @@ const CombinedQRGenerator = () => {
         </h1>
       </header>
 
-      <form onSubmit={handleGenerate} className={styles.form}>
+      <form onSubmit={handleGenerate} className={styles.form} noValidate>
         <div className={styles.inputGroup}>
           <label htmlFor="qr-content" className={styles.label}>
             QR Code Content *
@@ -189,6 +254,7 @@ const CombinedQRGenerator = () => {
             className={styles.input}
             required
             aria-describedby="input-help"
+            disabled={state.loading}
           />
           <small id="input-help" className={styles.helpText}>
             Enter a valid URL or any text content
@@ -208,6 +274,7 @@ const CombinedQRGenerator = () => {
                 value={state.color}
                 onChange={(e) => setState(prev => ({ ...prev, color: e.target.value }))}
                 className={styles.colorInput}
+                disabled={state.loading}
               />
             </div>
 
@@ -223,9 +290,10 @@ const CombinedQRGenerator = () => {
                 onChange={handleFileChange}
                 className={styles.fileInput}
                 aria-describedby="logo-help"
+                disabled={state.loading}
               />
               <small id="logo-help" className={styles.helpText}>
-                Maximum file size: 2MB (PNG/JPG)
+                Maximum file size: 2MB (PNG, JPG, GIF)
               </small>
 
               {state.logoPreview && (
@@ -244,6 +312,7 @@ const CombinedQRGenerator = () => {
                     }))}
                     className={styles.removeButton}
                     aria-label="Remove logo"
+                    disabled={state.loading}
                   >
                     &times;
                   </button>
@@ -271,8 +340,8 @@ const CombinedQRGenerator = () => {
       </form>
 
       {state.error && (
-        <div className={styles.error} role="alert">
-          ⚠️ {state.error}
+        <div className={`${styles.error} ${state.error.includes("copied") ? styles.success : ""}`} role="alert">
+          {state.error}
         </div>
       )}
 
@@ -295,6 +364,7 @@ const CombinedQRGenerator = () => {
               size={200}
               level="H"
               bgColor={isPremium ? state.color : "#000000"}
+              fgColor="#ffffff"
               className={styles.qrSVG}
               includeMargin={true}
             />
@@ -311,7 +381,11 @@ const CombinedQRGenerator = () => {
               Download
             </button>
             <button 
-              onClick={() => navigator.clipboard.writeText(state.generatedUrl)}
+              onClick={() => {
+                navigator.clipboard.writeText(state.generatedUrl);
+                setState(prev => ({ ...prev, error: "Link copied to clipboard!" }));
+                setTimeout(() => setState(prev => ({ ...prev, error: null })), 2000);
+              }}
               className={styles.actionButton}
               aria-label="Copy QR code link"
             >
