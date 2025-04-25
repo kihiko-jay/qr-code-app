@@ -203,5 +203,11 @@ router.post("/logout", authenticateUser, (req, res) => {
     code: "LOGOUT_SUCCESS"
   });
 });
-
+// In your authRoutes.js, add this before your routes:
+router.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
 export default router;

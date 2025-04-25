@@ -31,7 +31,11 @@ const HomePage = () => {
               Create, customize, and track dynamic QR codes with enterprise-grade analytics.
             </p>
             <div className={styles.ctaContainer}>
-              <Link to="/signup" className={styles.ctaButton}>Start Free Trial</Link>
+             
+             
+<Link to="/qr-generator" className={styles.ctaButton}>
+  Start Free Trial
+</Link>
               <p className={styles.ctaNote}>No credit card required</p>
             </div>
           </div>

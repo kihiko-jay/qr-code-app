@@ -29,10 +29,14 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
+        
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/Dashboard" element={<Dashboard />} />
         <Route path="/combinedQrGenerator" element={<CombinedQrGenerator />} />
+        
+        <Route path="/qr-generator" element={<QrGenerator />} />
         {/* Protected dashboard routes */}
         <Route path="/dashboard" element={
           <PrivateRoute>

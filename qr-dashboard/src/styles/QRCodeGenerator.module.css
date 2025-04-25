@@ -125,3 +125,34 @@
         height: 150px;
     }
 }
+/* Add to your existing styles */
+.trialNotice {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.trialNotice p {
+    color: #ffd700;
+    margin-bottom: 1rem;
+}
+
+.upgradeButton {
+    display: inline-block;
+    background: #2563eb;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.upgradeButton:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}

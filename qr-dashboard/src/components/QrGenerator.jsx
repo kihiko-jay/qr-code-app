@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { QRCodeSVG } from 'qrcode.react'; // Correct import
+import { QRCodeSVG } from 'qrcode.react';
+import { Link } from 'react-router-dom';
 import styles from '../styles/QRCodeGenerator.module.css';
 
 const QrGenerator = () => {
@@ -8,6 +9,7 @@ const QrGenerator = () => {
     const [qrImageUrl, setQrImageUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [isTrialUser, setIsTrialUser] = useState(true); // Assuming this comes from user state
 
     const handleGenerateQR = async () => {
         if (!qrData) {
@@ -109,6 +111,19 @@ const QrGenerator = () => {
                             </button>
                         )}
                     </div>
+
+                    {/* Add this section for trial users */}
+                    {isTrialUser && (
+                        <div className={styles.trialNotice}>
+                            <p>You're using the trial version. Upgrade for full features!</p>
+                            <Link 
+                                to="/signup" 
+                                className={styles.upgradeButton}
+                            >
+                                Get Started with Full Version
+                            </Link>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

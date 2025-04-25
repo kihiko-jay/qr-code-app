@@ -17,7 +17,22 @@ const CombinedQRGenerator = () => {
     logoPreview: ""
   });
 
-  // Get user data with proper error handling
+  // Authentication check and cleanup
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login", { 
+        state: { from: location.pathname },
+        replace: true 
+      });
+    }
+
+    return () => {
+      if (state.logoPreview) URL.revokeObjectURL(state.logoPreview);
+    };
+  }, [navigate, location, state.logoPreview]);
+
+  // User data handling with error protection
   const getUserData = () => {
     try {
       const userData = localStorage.getItem("user");
@@ -32,24 +47,6 @@ const CombinedQRGenerator = () => {
   const user = getUserData();
   const isPremium = user.role === "premium";
 
-  // Clean up object URLs
-  useEffect(() => {
-    return () => {
-      if (state.logoPreview) URL.revokeObjectURL(state.logoPreview);
-    };
-  }, [state.logoPreview]);
-
-  // Check authentication on mount
-  useEffect(() => {
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      navigate("/login", { 
-        state: { from: location.pathname },
-        replace: true 
-      });
-    }
-  }, [navigate, location]);
-
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -62,14 +59,11 @@ const CombinedQRGenerator = () => {
 
     // Validate file size
     if (file.size > 2 * 1024 * 1024) {
-      setState(prev => ({ 
-        ...prev, 
-        error: "File size must be less than 2MB" 
-      }));
+      setState(prev => ({ ...prev, error: "File size must be less than 2MB" }));
       return;
     }
 
-    // Create preview and update state
+    // Create preview
     const previewUrl = URL.createObjectURL(file);
     setState(prev => ({
       ...prev,
@@ -81,14 +75,11 @@ const CombinedQRGenerator = () => {
 
   const validateInput = (input) => {
     if (!input.trim()) {
-      setState(prev => ({ 
-        ...prev, 
-        error: "Please enter content for the QR code" 
-      }));
+      setState(prev => ({ ...prev, error: "Please enter content for the QR code" }));
       return false;
     }
     
-    // Optional URL validation
+    // URL validation warning
     try {
       new URL(input);
     } catch (_) {
@@ -101,11 +92,7 @@ const CombinedQRGenerator = () => {
   };
 
   const handleGenerationError = (error) => {
-    console.error("QR Generation Error:", {
-      error: error,
-      response: error.response,
-      config: error.config
-    });
+    console.error("QR Generation Error:", error);
 
     // Handle token expiration
     if (error.response?.status === 401) {
@@ -121,7 +108,7 @@ const CombinedQRGenerator = () => {
       return;
     }
 
-    // Handle specific error messages
+    // Set appropriate error message
     const errorMessage = error.response?.data?.message ||
       error.message ||
       "QR code generation failed. Please try again.";
@@ -136,7 +123,7 @@ const CombinedQRGenerator = () => {
   const handleGenerate = async (e) => {
     e.preventDefault();
     
-    // Check authentication
+    // Validate authentication
     const token = localStorage.getItem("authToken");
     if (!token) {
       navigate("/login", { state: { from: location.pathname } });
@@ -212,10 +199,7 @@ const CombinedQRGenerator = () => {
       } else {
         // Fallback for browsers without Web Share API
         await navigator.clipboard.writeText(state.generatedUrl);
-        setState(prev => ({ 
-          ...prev, 
-          error: "Link copied to clipboard!" 
-        }));
+        setState(prev => ({ ...prev, error: "Link copied to clipboard!" }));
         setTimeout(() => {
           setState(prev => ({ ...prev, error: null }));
         }, 2000);
@@ -223,202 +207,187 @@ const CombinedQRGenerator = () => {
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error("Sharing failed:", error);
-        setState(prev => ({ 
-          ...prev, 
-          error: "Sharing failed. Please try again." 
-        }));
+        setState(prev => ({ ...prev, error: "Sharing failed. Please try again." }));
       }
     }
   };
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>
-          QR Code Generator
-          {isPremium && <span className={styles.premiumBadge}>PRO</span>}
-        </h1>
-      </header>
-
-      <form onSubmit={handleGenerate} className={styles.form} noValidate>
-        <div className={styles.inputGroup}>
-          <label htmlFor="qr-content" className={styles.label}>
-            QR Code Content *
-          </label>
-          <input
-            id="qr-content"
-            type="text"
-            placeholder="https://example.com or your text"
-            value={state.qrData}
-            onChange={(e) => setState(prev => ({ ...prev, qrData: e.target.value }))}
-            className={styles.input}
-            required
-            aria-describedby="input-help"
-            disabled={state.loading}
-          />
-          <small id="input-help" className={styles.helpText}>
-            Enter a valid URL or any text content
-          </small>
-        </div>
-
-        {isPremium && (
-          <>
-            <div className={styles.inputGroup}>
-              <label htmlFor="qr-color" className={styles.label}>
-                QR Code Color
-                <span className={styles.premiumTag}>(Premium Feature)</span>
-              </label>
-              <input
-                id="qr-color"
-                type="color"
-                value={state.color}
-                onChange={(e) => setState(prev => ({ ...prev, color: e.target.value }))}
-                className={styles.colorInput}
-                disabled={state.loading}
-              />
-            </div>
-
-            <div className={styles.inputGroup}>
-              <label htmlFor="qr-logo" className={styles.label}>
-                Upload Logo
-                <span className={styles.premiumTag}>(Premium Feature)</span>
-              </label>
-              <input
-                id="qr-logo"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className={styles.fileInput}
-                aria-describedby="logo-help"
-                disabled={state.loading}
-              />
-              <small id="logo-help" className={styles.helpText}>
-                Maximum file size: 2MB (PNG, JPG, GIF)
-              </small>
-
-              {state.logoPreview && (
-                <div className={styles.filePreview}>
-                  <img 
-                    src={state.logoPreview} 
-                    alt="Logo preview" 
-                    className={styles.logoPreview}
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setState(prev => ({ 
-                      ...prev, 
-                      logo: null, 
-                      logoPreview: "" 
-                    }))}
-                    className={styles.removeButton}
-                    aria-label="Remove logo"
-                    disabled={state.loading}
-                  >
-                    &times;
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        <button 
-          type="submit" 
-          className={styles.button} 
-          disabled={state.loading}
-          aria-busy={state.loading}
-        >
-          {state.loading ? (
-            <>
-              <span className={styles.spinner} aria-hidden="true" />
-              Generating QR Code...
-            </>
-          ) : (
-            "Generate QR Code"
-          )}
-        </button>
-      </form>
-
-      {state.error && (
-        <div className={`${styles.error} ${state.error.includes("copied") ? styles.success : ""}`} role="alert">
-          {state.error}
-        </div>
-      )}
-
-      <section className={styles.preview}>
-        <h2 className={styles.subtitle}>
-          {state.generatedUrl ? "Generated QR Code" : "Live Preview"}
-        </h2>
+    <div className={styles.wrapper}>
+      <div className={styles.container}>
+        {/* QR Pattern Background Elements */}
+        <div className={styles.qrPattern} style={{ top: "20%", left: "10%" }} />
+        <div className={styles.qrPattern} style={{ bottom: "15%", right: "12%" }} />
         
-        <div className={styles.qrContainer}>
-          {state.generatedUrl ? (
-            <img 
-              src={state.generatedUrl} 
-              alt="Generated QR Code" 
-              className={styles.qrImage} 
-              loading="lazy"
-            />
-          ) : (
-            <QRCodeSVG
-              value={state.qrData || " "}
-              size={200}
-              level="H"
-              bgColor={isPremium ? state.color : "#000000"}
-              fgColor="#ffffff"
-              className={styles.qrSVG}
-              includeMargin={true}
-            />
-          )}
-        </div>
+        <header className={styles.header}>
+          <h1 className={styles.title}>
+            QR Code Generator
+            {isPremium && <span className={styles.premiumBadge}>PRO</span>}
+          </h1>
+        </header>
 
-        {state.generatedUrl && (
-          <div className={styles.actions}>
-            <button 
-              onClick={handleDownload}
-              className={styles.actionButton}
-              aria-label="Download QR code"
-            >
-              Download
-            </button>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText(state.generatedUrl);
-                setState(prev => ({ ...prev, error: "Link copied to clipboard!" }));
-                setTimeout(() => setState(prev => ({ ...prev, error: null })), 2000);
-              }}
-              className={styles.actionButton}
-              aria-label="Copy QR code link"
-            >
-              Copy Link
-            </button>
-            <button 
-              onClick={handleShare}
-              className={styles.actionButton}
-              aria-label="Share QR code"
-            >
-              Share
-            </button>
+        <form onSubmit={handleGenerate} className={styles.form} noValidate>
+          <div className={styles.inputGroup}>
+            <label htmlFor="qr-content" className={styles.label}>
+              QR Code Content *
+            </label>
+            <input
+              id="qr-content"
+              type="text"
+              placeholder="https://example.com or your text"
+              value={state.qrData}
+              onChange={(e) => setState(prev => ({ ...prev, qrData: e.target.value }))}
+              className={styles.input}
+              required
+              disabled={state.loading}
+            />
+            <small className={styles.helpText}>
+              Enter a valid URL or any text content
+            </small>
+          </div>
+
+          {isPremium && (
+            <>
+              <div className={styles.inputGroup}>
+                <label htmlFor="qr-color" className={styles.label}>
+                  QR Code Color
+                  <span className={styles.premiumTag}>(Premium Feature)</span>
+                </label>
+                <input
+                  id="qr-color"
+                  type="color"
+                  value={state.color}
+                  onChange={(e) => setState(prev => ({ ...prev, color: e.target.value }))}
+                  className={styles.colorInput}
+                  disabled={state.loading}
+                />
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label htmlFor="qr-logo" className={styles.label}>
+                  Upload Logo
+                  <span className={styles.premiumTag}>(Premium Feature)</span>
+                </label>
+                <input
+                  id="qr-logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className={styles.fileInput}
+                  disabled={state.loading}
+                />
+                <small className={styles.helpText}>
+                  Maximum file size: 2MB (PNG, JPG, GIF)
+                </small>
+
+                {state.logoPreview && (
+                  <div className={styles.filePreview}>
+                    <img 
+                      src={state.logoPreview} 
+                      alt="Logo preview" 
+                      className={styles.logoPreview}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setState(prev => ({ ...prev, logo: null, logoPreview: "" }))}
+                      className={styles.removeButton}
+                      disabled={state.loading}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          <button 
+            type="submit" 
+            className={styles.button} 
+            disabled={state.loading}
+            aria-busy={state.loading}
+          >
+            {state.loading ? (
+              <>
+                <span className={styles.spinner} aria-hidden="true" />
+                Generating QR Code...
+              </>
+            ) : (
+              "Generate QR Code"
+            )}
+          </button>
+        </form>
+
+        {state.error && (
+          <div className={`${styles.error} ${state.error.includes("copied") ? styles.success : ""}`}>
+            {state.error}
           </div>
         )}
-      </section>
 
-      {!isPremium && (
-        <aside className={styles.upgradeBanner}>
-          <h3>Unlock Premium Features</h3>
-          <ul className={styles.featureList}>
-            <li>Custom QR Code Colors</li>
-            <li>Brand Logo Integration</li>
-            <li>Advanced Analytics</li>
-            <li>Priority Support</li>
-          </ul>
-          <button 
-            onClick={() => navigate("/upgrade")}
-            className={styles.upgradeButton}
-          >
-            Upgrade to PRO
-          </button>
-        </aside>
-      )}
+        <section className={styles.preview}>
+          <h2 className={styles.subtitle}>
+            {state.generatedUrl ? "Generated QR Code" : "Live Preview"}
+          </h2>
+          
+          <div className={styles.qrContainer}>
+            {state.generatedUrl ? (
+              <img 
+                src={state.generatedUrl} 
+                alt="Generated QR Code" 
+                className={styles.qrImage} 
+              />
+            ) : (
+              <QRCodeSVG
+                value={state.qrData || " "}
+                size={200}
+                level="H"
+                bgColor={isPremium ? state.color : "#000000"}
+                fgColor="#ffffff"
+                className={styles.qrSVG}
+              />
+            )}
+          </div>
+
+          {state.generatedUrl && (
+            <div className={styles.actions}>
+              <button onClick={handleDownload} className={styles.actionButton}>
+                Download
+              </button>
+              <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(state.generatedUrl);
+                  setState(prev => ({ ...prev, error: "Link copied to clipboard!" }));
+                  setTimeout(() => setState(prev => ({ ...prev, error: null })), 2000);
+                }}
+                className={styles.actionButton}
+              >
+                Copy Link
+              </button>
+              <button onClick={handleShare} className={styles.actionButton}>
+                Share
+              </button>
+            </div>
+          )}
+        </section>
+
+        {!isPremium && (
+          <aside className={styles.upgradeBanner}>
+            <h3>Unlock Premium Features</h3>
+            <ul className={styles.featureList}>
+              <li>Custom QR Code Colors</li>
+              <li>Brand Logo Integration</li>
+              <li>Advanced Analytics</li>
+              <li>Priority Support</li>
+            </ul>
+            <button 
+              onClick={() => navigate("/upgrade")}
+              className={styles.upgradeButton}
+            >
+              Upgrade to PRO
+            </button>
+          </aside>
+        )}
+      </div>
     </div>
   );
 };
