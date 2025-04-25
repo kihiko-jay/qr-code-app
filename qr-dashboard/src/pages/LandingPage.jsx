@@ -2,18 +2,16 @@
 import { Link } from "react-router-dom";
 import styles from "../styles/Homepage.module.css";
 import heroImage from "../Assets/HeroImage.webp";
-import colors from "../styles/colors.module.css"
+
 const HomePage = () => {
   return (
     <div className={styles.container}>
       {/* Header */}
-     
       <header className={styles.header}>
-        
         <div className={styles.headerContent}>
-          <h1 className={styles.logo}>QRXpert</h1>
+          <h2 className={styles.highlight}>Unlock Dynamic Campaigns With Smart QR Solutions</h2>
           <nav className={styles.nav}>
-            <Link to="/login" className={styles.navLink}>Sign In</Link>
+            <Link to="/login" className={styles.primaryButton}>Sign In</Link>
             <Link to="/signup" className={styles.primaryButton}>Get Started</Link>
           </nav>
         </div>
@@ -31,11 +29,9 @@ const HomePage = () => {
               Create, customize, and track dynamic QR codes with enterprise-grade analytics.
             </p>
             <div className={styles.ctaContainer}>
-             
-             
-<Link to="/qr-generator" className={styles.ctaButton}>
-  Start Free Trial
-</Link>
+              <Link to="/qr-generator" className={styles.primaryButton}>
+                Start Free Trial
+              </Link>
               <p className={styles.ctaNote}>No credit card required</p>
             </div>
           </div>
@@ -57,35 +53,48 @@ const HomePage = () => {
         </div>
         <div className={styles.featuresGrid}>
           <div className={styles.featureCard}>
-            <div className={styles.featureIcon}>🎨</div>
-            <h3 className={styles.sectionTitle}>Custom Design</h3>
-            <p>Brand-aligned QR codes with colors, logos, and frames</p>
+            <div className={styles.featureIcon}>🚀</div>
+            <h3 className={styles.featureTitle}>Campaign Tracking</h3>
+            <p>Real-time analytics for QR scans—measure engagement by location, time, and device.</p>
           </div>
+
           <div className={styles.featureCard}>
             <div className={styles.featureIcon}>🎨</div>
-            <h3 className={styles.sectionTitle}>Custom Design</h3>
-            <p>Brand-aligned QR codes with colors, logos, and frames</p>
+            <h3 className={styles.featureTitle}>Custom Design</h3>
+            <p>Embed logos, colors, and patterns while ensuring 100% scan reliability.</p>
           </div>
+
           <div className={styles.featureCard}>
-            <div className={styles.featureIcon}>🎨</div>
-            <h3 className={styles.sectionTitle}>Custom Design</h3>
-            <p>Brand-aligned QR codes with colors, logos, and frames</p>
+            <div className={styles.featureIcon}>📱</div>
+            <h3 className={styles.featureTitle}>Digital Menus</h3>
+            <p>Convert restaurant menus into scannable codes for contactless ordering.</p>
           </div>
-          
-          {/* Add other feature cards similarly */}
+
+          <div className={styles.featureCard}>
+            <div className={styles.featureIcon}>🛒</div>
+            <h3 className={styles.featureTitle}>Instant Checkout</h3>
+            <p>Link QR codes to payment gateways for one-tap purchases.</p>
+          </div>
+
+          <div className={styles.featureCard}>
+            <div className={styles.featureIcon}>🎟️</div>
+            <h3 className={styles.featureTitle}>Event Access</h3>
+            <p>Secure ticketing with unique, fraud-proof QR codes.</p>
+          </div>
+
+          <div className={styles.featureCard}>
+            <div className={styles.featureIcon}>📚</div>
+            <h3 className={styles.featureTitle}>Interactive Learning</h3>
+            <p>Enhance textbooks with scannable codes for AR content.</p>
+          </div>
         </div>
       </section>
-
-      {/* Other sections follow similar structured patterns */}
-      
 
       {/* Footer */}
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
           <div className={styles.footerBrand}>
-            <div className={styles.sectionTitle}>
-            <h3 className={styles.footerLogo} >QRXpert</h3>
-            </div>
+            <h3 className={styles.footerTitle}>Smart QR Marketing Solutions</h3>
             <p>© {new Date().getFullYear()} All rights reserved</p>
           </div>
           <nav className={styles.footerNav}>

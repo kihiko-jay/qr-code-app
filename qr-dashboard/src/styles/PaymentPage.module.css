@@ -1,68 +1,37 @@
+/* PaymentPage.module.css */
 .container {
-  background: rgba(32, 32, 32, 0.95);
-  backdrop-filter: blur(12px);
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 2.5rem;
+  background: rgba(18, 18, 18, 0.95);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 200, 200, 0.1);
+  padding: 2rem;
   max-width: 500px;
   margin: 2rem auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.logo {
-  width: 48px;
-  height: 48px;
-  filter: drop-shadow(0 0 12px rgba(0, 255, 136, 0.3));
-}
-
-.brandName {
-  color: #00ff88;
-  font-size: 2rem;
-  margin: 0;
-  text-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
-}
-
-.tagline {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 1.1rem;
-  margin-bottom: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
 }
 
 .content {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .title {
-  color: rgba(255, 255, 255, 0.9);
+  color: #00C8C8;
   text-align: center;
   margin-bottom: 2rem;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
 }
 
 .methodGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
 .methodCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: rgba(0, 200, 200, 0.05);
+  border: 1px solid rgba(0, 200, 200, 0.1);
+  border-radius: 12px;
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -70,22 +39,23 @@
 }
 
 .methodCard:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateY(-2px);
+  background: rgba(0, 200, 200, 0.1);
 }
 
 .methodCard.active {
-  border-color: #00ff88;
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+  border-color: #00C8C8;
+  background: rgba(0, 200, 200, 0.1);
+  box-shadow: 0 0 20px rgba(0, 200, 200, 0.2);
 }
 
 .methodIcon {
   font-size: 2rem;
   margin-bottom: 1rem;
+  color: #00C8C8;
 }
 
 .methodTitle {
-  color: #00ff88;
+  color: white;
   margin: 0 0 0.5rem;
   font-size: 1.1rem;
 }
@@ -103,24 +73,22 @@
 .input {
   width: 100%;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 200, 200, 0.05);
+  border: 1px solid rgba(0, 200, 200, 0.2);
   border-radius: 8px;
   color: white;
   font-size: 1rem;
-  transition: all 0.3s ease;
 }
 
 .input:focus {
   outline: none;
-  border-color: #00ff88;
-  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+  border-color: #00C8C8;
 }
 
 .inputNote {
   display: block;
   color: rgba(255, 255, 255, 0.5);
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   margin-top: 0.5rem;
 }
 
@@ -137,94 +105,39 @@
 .amountInput {
   width: 100%;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 200, 200, 0.05);
+  border: 1px solid rgba(0, 200, 200, 0.2);
   border-radius: 8px;
   color: white;
-  font-size: 1.25rem;
-  text-align: center;
+  font-size: 1rem;
 }
 
 .payButton {
   width: 100%;
-  padding: 1.25rem;
-  background: #00ff88;
+  padding: 1rem;
+  background: #00C8C8;
   color: #121212;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.payButton:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
 }
 
 .payButton:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+  box-shadow: 0 5px 15px rgba(0, 200, 200, 0.3);
 }
 
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid rgba(18, 18, 18, 0.2);
-  border-top-color: #121212;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.message {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1.5rem;
-  text-align: center;
-  font-size: 0.9rem;
-}
-
-.success {
-  background: rgba(0, 255, 136, 0.1);
-  color: #00ff88;
-  border: 1px solid rgba(0, 255, 136, 0.2);
-}
-
-.error {
-  background: rgba(255, 71, 87, 0.1);
-  color: #ff4757;
-  border: 1px solid rgba(255, 71, 87, 0.2);
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+/* Responsive styles */
 @media (max-width: 768px) {
   .container {
     padding: 1.5rem;
     margin: 1rem;
-    border-radius: 16px;
   }
-
+  
   .methodGrid {
     grid-template-columns: 1fr;
-  }
-
-  .methodCard {
-    padding: 1rem;
-  }
-
-  .brandName {
-    font-size: 1.75rem;
-  }
-
-  .tagline {
-    font-size: 1rem;
   }
 }

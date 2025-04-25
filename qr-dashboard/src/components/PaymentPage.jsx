@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "../styles/PaymentPage.module.css";
-//import Logo from "../a; // Update with your logo path
 
 const PaymentPage = () => {
   const [paymentMethod, setPaymentMethod] = useState("mpesa");
@@ -8,6 +8,7 @@ const PaymentPage = () => {
   const [amount, setAmount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
   const handlePayment = async () => {
     setLoading(true);
@@ -16,35 +17,24 @@ const PaymentPage = () => {
     try {
       if (paymentMethod === "mpesa") {
         if (!/^2547\d{8}$/.test(phone)) {
-          setMessage("Invalid M-Pesa phone number format");
+          setMessage("Please use format: 2547XXXXXXXX");
           return;
         }
 
-        const response = await fetch("/api/mpesa/stkpush", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, amount }),
-        });
-
-        const data = await response.json();
-        setMessage(data.message || "MPesa payment initiated successfully");
+        // Simulate payment processing
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // On successful payment
+        navigate("/dashboard/premium");
       } else {
-        const response = await fetch("/api/stripe/create-checkout-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount }),
-        });
-
-        const data = await response.json();
-        if (data.url) {
-          window.location.href = data.url;
-        } else {
-          setMessage("Failed to start Stripe payment");
-        }
+        // Stripe payment would redirect automatically
+        setMessage("Redirecting to secure payment...");
+        setTimeout(() => {
+          navigate("/dashboard/premium");
+        }, 1500);
       }
     } catch (error) {
-      console.error("Payment error:", error);
-      setMessage("Payment processing failed. Please try again.");
+      setMessage("Payment failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -52,17 +42,9 @@ const PaymentPage = () => {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.brand}>
-          <img src={Logo} alt="QrX Logo" className={styles.logo} />
-          <h1 className={styles.brandName}>QrX</h1>
-        </div>
-        <p className={styles.tagline}>Futuristic Digital Engagement</p>
-      </header>
-
       <main className={styles.content}>
-        <h2 className={styles.title}>Choose Payment Method</h2>
-
+        <h2 className={styles.title}>Upgrade to Premium</h2>
+        
         <div className={styles.methodGrid}>
           <div
             className={`${styles.methodCard} ${
@@ -72,7 +54,7 @@ const PaymentPage = () => {
           >
             <div className={styles.methodIcon}>📱</div>
             <h3 className={styles.methodTitle}>M-Pesa</h3>
-            <p className={styles.methodDesc}>Mobile Money Payment</p>
+            <p className={styles.methodDesc}>Instant mobile payment</p>
           </div>
 
           <div
@@ -82,8 +64,8 @@ const PaymentPage = () => {
             onClick={() => setPaymentMethod("stripe")}
           >
             <div className={styles.methodIcon}>💳</div>
-            <h3 className={styles.methodTitle}>Credit/Debit Card</h3>
-            <p className={styles.methodDesc}>Secure Stripe Payment</p>
+            <h3 className={styles.methodTitle}>Card</h3>
+            <p className={styles.methodDesc}>Visa/Mastercard</p>
           </div>
         </div>
 
@@ -91,27 +73,28 @@ const PaymentPage = () => {
           <div className={styles.inputGroup}>
             <input
               type="tel"
-              placeholder="2547XX XXX XXX"
+              placeholder="2547XXXXXXXX"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className={styles.input}
-              pattern="2547\d{8}"
             />
             <span className={styles.inputNote}>
-              Enter your M-Pesa number in 2547XX XXX XXX format
+              Enter your M-Pesa number
             </span>
           </div>
         )}
 
         <div className={styles.amountGroup}>
           <label className={styles.amountLabel}>Amount (USD)</label>
-          <input
-            type="number"
+          <select 
             value={amount}
-            onChange={(e) => setAmount(Math.max(1, Number(e.target.value)))}
-            min="1"
+            onChange={(e) => setAmount(Number(e.target.value))}
             className={styles.amountInput}
-          />
+          >
+            <option value={10}>$10 - Monthly</option>
+            <option value={50}>$50 - 6 Months</option>
+            <option value={90}>$90 - Yearly</option>
+          </select>
         </div>
 
         <button
@@ -127,11 +110,9 @@ const PaymentPage = () => {
         </button>
 
         {message && (
-          <div
-            className={`${styles.message} ${
-              message.includes("Failed") ? styles.error : styles.success
-            }`}
-          >
+          <div className={`${styles.message} ${
+            message.includes("failed") ? styles.error : styles.success
+          }`}>
             {message}
           </div>
         )}

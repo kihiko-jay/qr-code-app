@@ -1,14 +1,18 @@
+// Header.jsx
 import React from "react";
-import styles from "../styles/Header.module.css"
-import colors from "../styles/colors.module.css"
+import styles from "../styles/Header.module.css";
+
 const Header = () => {
   return (
-    <div className={styles.header}>
-  <h1 className={styles.mainTitle}>QrX Marketing Solutions</h1>
-  <p className={styles.tagline}>Futuristic Digital Engagement</p>
-  
-  {/* Rest of your header content */}
-    </div>
+    <header className={styles.header}>
+      <div className={styles.headerContent}>
+        <h1 className={styles.mainTitle}>Smart QR Marketing Solutions</h1>
+        <div className={styles.taglineContainer}>
+          <p className={styles.tagline}>Futuristic Digital Engagement</p>
+          <p className={styles.subTagline}>Where Innovation Meets Interaction</p>
+        </div>
+      </div>
+    </header>
   );
 };
 
