@@ -1,4 +1,3 @@
-// App.jsx
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import HomePage from "./pages/LandingPage";
 import Login from "./pages/Login";
@@ -11,27 +10,18 @@ import MyQrCodes from "./components/MyQrCodes";
 import AdminUsers from "./pages/AdminUsers";
 import AdminQrCodes from "./pages/AdminQrCodes";
 import PremiumDashboard from "./pages/PremiumDashboard";
-
+import CombinedQrGenerator from "./components/CombinedQrGenerator";
 import PremiumQRGenerator from "./components/PremiumQRGenerator";
-
-// Enhanced PrivateRoute component
+// Private route component
 const PrivateRoute = ({ children }) => {
   const token = sessionStorage.getItem('token');
   return token ? children : <Navigate to="/login" replace />;
 };
 
-// PremiumRoute component (new)
-const PremiumRoute = ({ children }) => {
-  const user = JSON.parse(sessionStorage.getItem('user'));
-  if (!user) return <Navigate to="/login" replace />;
-  if (!user.isPremium) return <Navigate to="/payment" replace />;
-  return children;
-};
-
 // Admin route component
 const AdminRoute = ({ children }) => {
   const user = JSON.parse(sessionStorage.getItem('user'));
-  return user?.role === 'admin' ? children : <Navigate to="/dashboard" replace />;
+  return user?.role === 'admin' ? children : <Navigate to="/combinedQrGenerator" replace />;
 };
 
 function App() {
@@ -41,13 +31,16 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
+        
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/dashboard/premium" element={<PremiumDashboard />} />
         <Route path="/dashboard/premiumqrgenerator" element={<PremiumQRGenerator />} />
-        <Route path="generate" element={<QrGenerator />} />
-        <Route path="qr-generator" element={<PremiumQRGenerator />} />
+        <Route path="/Dashboard" element={<Dashboard />} />
+        <Route path="/combinedQrGenerator" element={<CombinedQrGenerator />} />
+        
+        <Route path="/qr-generator" element={<QrGenerator />} />
         {/* Protected dashboard routes */}
         <Route path="/dashboard" element={
           <PrivateRoute>
@@ -58,21 +51,12 @@ function App() {
             <>
               <QrGenerator />
               <MyQrCodes />
+              
             </>
           } />
-          
-         
+          <Route path="combinedQrGenerator" element={<CombinedQrGenerator/>}/>
+          <Route path="generate" element={<QrGenerator />} />
           <Route path="my-qrcodes" element={<MyQrCodes />} />
-        </Route>
-
-        {/* Premium routes */}
-        <Route path="/premium" element={
-          <PremiumRoute>
-            <PremiumDashboard />
-          </PremiumRoute>
-        }>
-          <Route index element={<PremiumDashboard />} />
-          <Route path="qr-generator" element={<PremiumQRGenerator />} />
         </Route>
 
         {/* Admin protected routes */}

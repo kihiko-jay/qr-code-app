@@ -1,0 +1,214 @@
+/* PremiumQRGenerator.module.css */
+.premiumContainer {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: #121212;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 200, 200, 0.2);
+  }
+  
+  .premiumHeader {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid rgba(0, 200, 200, 0.1);
+  }
+  
+  .premiumBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(45deg, #00C8C8, #0077cc);
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-weight: bold;
+    margin-bottom: 1rem;
+  }
+  
+  .generatorGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+  
+  .configPanel {
+    background: #1e1e1e;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 200, 200, 0.1);
+  }
+  
+  .inputGroup {
+    margin-bottom: 2rem;
+  }
+  
+  .inputGroup label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: #00C8C8;
+    font-weight: 500;
+  }
+  
+  .inputGroup input[type="text"],
+  .inputGroup input[type="color"],
+  .inputGroup select {
+    width: 100%;
+    padding: 0.75rem;
+    background: #2d2d2d;
+    border: 1px solid #3d3d3d;
+    border-radius: 8px;
+    color: white;
+  }
+  
+  .colorPalette {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+  }
+  
+  .colorPalette button {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  
+  .colorPalette button:hover {
+    transform: scale(1.1);
+  }
+  
+  .activeColor {
+    border-color: white !important;
+    transform: scale(1.1);
+  }
+  
+  .uploadArea {
+    border: 2px dashed rgba(0, 200, 200, 0.3);
+    padding: 2rem;
+    text-align: center;
+    border-radius: 8px;
+    transition: all 0.3s;
+  }
+  
+  .uploadArea:hover {
+    border-color: rgba(0, 200, 200, 0.6);
+  }
+  
+  .logoPreview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .logoPreview img {
+    max-width: 150px;
+    max-height: 150px;
+    object-fit: contain;
+  }
+  
+  .premiumOptions {
+    display: grid;
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+  
+  .generateButton {
+    width: 100%;
+    padding: 1rem;
+    background: #00C8C8;
+    color: #121212;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .generateButton:hover {
+    background: #00a8a8;
+  }
+  
+  .previewPanel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .qrPreview {
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .downloadOptions {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .downloadButtons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  
+  .downloadButtons button {
+    background: #2d2d2d;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .downloadButtons button:hover {
+    background: #00C8C8;
+    color: #121212;
+  }
+  
+  .shareOptions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .errorMessage {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  @media (max-width: 768px) {
+    .generatorGrid {
+      grid-template-columns: 1fr;
+    }
+    
+    .premiumHeader h1 {
+      font-size: 1.8rem;
+    }
+    
+    .downloadButtons {
+      flex-direction: column;
+    }
+    
+    .downloadButtons button {
+      width: 100%;
+    }
+  }
