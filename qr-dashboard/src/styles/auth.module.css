@@ -172,7 +172,7 @@ h1, h2, h3 {
 .button:hover:not(:disabled) {
   background: var(--primary-600);
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+  box-shadow: 0 5px 15px rgba(17, 195, 240, 0.3);
 }
 
 .button:disabled {
