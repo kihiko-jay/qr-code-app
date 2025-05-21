@@ -1,47 +1,41 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import { authenticateUser } from '../middleware/authMiddleware.js';
-import dotenv from 'dotenv';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import User from '../models/User.js';
+
 dotenv.config();
+
+const router = express.Router();
 
 // Rate limiting middleware
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
     message: "Too many requests from this IP, please try again later.",
     code: "TOO_MANY_REQUESTS"
   },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
-const router = express.Router();
-router.get('/api/test-cors', (req, res) => {
-  res.json({ 
-    message: "CORS test successful",
-    origin: req.get('origin'),
-    headers: req.headers 
+// Check required env vars
+['JWT_SECRET', 'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS', 'CLIENT_URL']
+  .forEach(key => {
+    if (!process.env[key]) {
+      console.error(`❌ Missing ${key} in .env`);
+      process.exit(1);
+    }
   });
-});
-// Validate environment configuration
-const requiredEnvVars = ['JWT_SECRET', 'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS'];
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    console.error(`❌ ERROR: ${envVar} is missing in .env`);
-    process.exit(1);
-  }
-}
 
-// Email transporter setup
+// Setup email transporter
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
+  port: parseInt(process.env.EMAIL_PORT),
   secure: true,
   auth: {
     user: process.env.EMAIL_USER,
@@ -49,105 +43,127 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Generate token
+// Helpers
 const generateToken = (userId, role) => {
-  return jwt.sign(
-    { id: userId, role },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE || '7d' }
-  );
+  return jwt.sign({ id: userId, role }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || '7d'
+  });
 };
 
-// Generate email verification token
 const generateEmailToken = () => {
   return crypto.randomBytes(20).toString('hex');
 };
 
+// Routes
+
 // @route   POST /api/auth/register
-// @access  Public
 router.post('/register', authLimiter, async (req, res) => {
   try {
     let { username, email, password, role } = req.body;
 
-    // Validate input
     if (!username || !email || !password) {
-      return res.status(400).json({ 
-        message: "All fields are required",
-        code: "MISSING_FIELDS"
-      });
+      return res.status(400).json({ message: "All fields are required", code: "MISSING_FIELDS" });
     }
 
-    // Normalize inputs
     email = email.toLowerCase().trim();
     username = username.trim();
     role = role?.trim().toLowerCase() || 'user';
 
-    // Validate email format
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({
-        message: "Invalid email format",
-        code: "INVALID_EMAIL"
-      });
+      return res.status(400).json({ message: "Invalid email format", code: "INVALID_EMAIL" });
     }
 
-    // Check password strength
     if (password.length < 8) {
-      return res.status(400).json({
-        message: "Password must be at least 8 characters",
-        code: "WEAK_PASSWORD"
-      });
+      return res.status(400).json({ message: "Password must be at least 8 characters", code: "WEAK_PASSWORD" });
     }
 
-    // Check for existing user
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
       return res.status(400).json({
-        message: existingUser.email === email 
-          ? "Email already registered" 
-          : "Username already exists",
+        message: existingUser.email === email ? "Email already registered" : "Username already exists",
         code: "USER_EXISTS"
       });
     }
 
-    // Create user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const emailToken = generateEmailToken();
+
     const user = new User({
       username,
       email,
-      password,
+      password: hashedPassword,
       role,
-      emailVerificationToken: generateEmailToken(),
+      emailVerificationToken: emailToken,
       emailVerified: false
     });
 
     await user.save();
 
-    // Send verification email
-    const verificationUrl = `${process.env.CLIENT_URL}/verify-email?token=${user.emailVerificationToken}`;
-    
+    const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${emailToken}`;
+
     await transporter.sendMail({
       from: `"${process.env.EMAIL_SENDER_NAME}" <${process.env.EMAIL_USER}>`,
-      to: user.email,
-      subject: 'Verify Your Email Address',
-      html: `
-        <p>Please click the following link to verify your email:</p>
-        <p><a href="${verificationUrl}">${verificationUrl}</a></p>
-        <p>If you didn't create an account, please ignore this email.</p>
-      `
+      to: email,
+      subject: "Verify Your Email",
+      html: `<p>Click the link below to verify your email:</p><a href="${verifyUrl}">${verifyUrl}</a>`
     });
 
-    // Generate auth token
     const token = generateToken(user._id, user.role);
-
-    // Set secure HTTP-only cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
     res.status(201).json({
-      message: "User registered successfully. Please check your email to verify your account.",
+      message: "User registered. Please verify your email.",
+      token,
+      user: {
+        id: user._id,
+        username,
+        email,
+        role,
+        emailVerified: user.emailVerified
+      },
+      code: "REGISTRATION_SUCCESS"
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error", code: "SERVER_ERROR" });
+  }
+});
+
+// @route   POST /api/auth/login
+router.post('/login', authLimiter, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required", code: "MISSING_FIELDS" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.status(404).json({ message: "User not found", code: "USER_NOT_FOUND" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials", code: "INVALID_CREDENTIALS" });
+    }
+
+    const token = generateToken(user._id, user.role);
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.status(200).json({
+      message: "Login successful",
       token,
       user: {
         id: user._id,
@@ -156,28 +172,43 @@ router.post('/register', authLimiter, async (req, res) => {
         role: user.role,
         emailVerified: user.emailVerified
       },
-      code: "REGISTRATION_SUCCESS"
+      code: "LOGIN_SUCCESS"
     });
 
   } catch (err) {
-    console.error("Registration Error:", err);
-
-    // Handle duplicate key errors
-    if (err.code === 11000) {
-      return res.status(400).json({
-        message: `${Object.keys(err.keyValue)[0]} already exists`,
-        code: "DUPLICATE_KEY"
-      });
-    }
-
-    res.status(500).json({ 
-      message: "Registration failed. Please try again.",
-      code: "SERVER_ERROR"
-    });
+    console.error(err);
+    res.status(500).json({ message: "Login failed", code: "SERVER_ERROR" });
   }
 });
 
-// Add other routes (login, logout, me, verifyEmail, etc.) here...
-// For your auth routes when setting cookies
+// @route   GET /api/auth/verify-email
+router.get('/verify-email', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ message: "Token is required", code: "MISSING_TOKEN" });
+
+    const user = await User.findOne({ emailVerificationToken: token });
+    if (!user) return res.status(400).json({ message: "Invalid token", code: "INVALID_TOKEN" });
+
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save();
+
+    res.status(200).json({ message: "Email verified successfully", code: "EMAIL_VERIFIED" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Verification failed", code: "SERVER_ERROR" });
+  }
+});
+
+// @route   POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production'
+  });
+  res.status(200).json({ message: "Logged out successfully", code: "LOGOUT_SUCCESS" });
+});
 
 export default router;

@@ -7,7 +7,7 @@ import path from "path";
 import { createServer } from 'node:https';
 import { readFileSync } from 'node:fs';
 import { corsMiddleware, corsPreflight, requestLogger } from "./middleware/corsMiddleware.js";
-
+import cors from "cors";
 // Load environment variables
 dotenv.config();
 
@@ -55,6 +55,10 @@ app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 app.use(requestLogger);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+const allowedOrigins = [
+  'https://cuddly-dollop-4rjgj64r5rxh7xvj-5173.app.github.dev', // your frontend
+];
+
 
 // =====================
 // ROUTES
@@ -141,6 +145,13 @@ connectDB();
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed');
+    process.exit(0);
+  });
+});
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
   mongoose.connection.close(() => {
     console.log('MongoDB connection closed');
     process.exit(0);
