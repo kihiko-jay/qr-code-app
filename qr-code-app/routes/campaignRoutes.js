@@ -1,12 +1,17 @@
 import express from "express";
-import { protect } from "../middleware/authMiddleware.js"; // ✅ Fix: Correct import
+import { authenticateUser } from "../middleware/authMiddleware.js";
 import Campaign from "../models/Campaign.js";
 import QrCode from "../models/QrCode.js";
+
+import dotenv from "dotenv";
+dotenv.config();
+import rateLimit from "express-rate-limit";
+import nodemailer from "nodemailer";
 
 const router = express.Router();
 
 // Create a new campaign
-router.post("/create", protect, async (req, res) => {
+router.post("/create", authenticateUser, async (req, res) => {
   try {
     const { name, qrCodeIds } = req.body;
     const userId = req.user._id; // ✅ Fix: Use req.user._id instead of req.user.userId
@@ -33,7 +38,7 @@ router.post("/create", protect, async (req, res) => {
 });
 
 // Get all campaigns for a user
-router.get("/", protect, async (req, res) => {
+router.get("/", authenticateUser, async (req, res) => {
   try {
     const campaigns = await Campaign.find({ userId: req.user._id }).populate("qrCodes");
     res.status(200).json(campaigns);
@@ -43,7 +48,7 @@ router.get("/", protect, async (req, res) => {
 });
 
 // Add a QR code to an existing campaign
-router.put("/add-qrcode/:campaignId", protect, async (req, res) => {
+router.put("/add-qrcode/:campaignId", authenticateUser, async (req, res) => {
   try {
     const { qrCodeId } = req.body;
     const campaign = await Campaign.findOne({ _id: req.params.campaignId, userId: req.user._id });
@@ -68,7 +73,7 @@ router.put("/add-qrcode/:campaignId", protect, async (req, res) => {
 });
 
 // Remove a QR code from a campaign
-router.put("/remove-qrcode/:campaignId", protect, async (req, res) => {
+router.put("/remove-qrcode/:campaignId", authenticateUser, async (req, res) => {
   try {
     const { qrCodeId } = req.body;
     const campaign = await Campaign.findOne({ _id: req.params.campaignId, userId: req.user._id });
@@ -87,7 +92,7 @@ router.put("/remove-qrcode/:campaignId", protect, async (req, res) => {
 });
 
 // Activate or deactivate a campaign
-router.put("/toggle-status/:campaignId", protect, async (req, res) => {
+router.put("/toggle-status/:campaignId", authenticateUser, async (req, res) => {
   try {
     const campaign = await Campaign.findOne({ _id: req.params.campaignId, userId: req.user._id });
 

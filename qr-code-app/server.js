@@ -2,76 +2,59 @@ import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import helmet from "helmet";
 import path from "path";
-import { createServer } from 'node:https'; // Correct way to import https
-import { readFileSync } from 'node:fs'; // Correct way to import fs
+import { createServer } from 'node:https';
+import { readFileSync } from 'node:fs';
+import { corsMiddleware, corsPreflight, requestLogger } from "./middleware/corsMiddleware.js";
 
 // Load environment variables
 dotenv.config();
+
+// Validate required environment variables
+const requiredEnvVars = [
+  'MONGO_URI',
+  'JWT_SECRET',
+  'PORT',
+  ...(process.env.NODE_ENV === 'production' ? [
+    'EMAIL_HOST',
+    'EMAIL_PORT',
+    'EMAIL_USER',
+    'EMAIL_PASS'
+  ] : [])
+];
+
+requiredEnvVars.forEach(varName => {
+  if (!process.env[varName]) {
+    console.error(`❌ Missing required environment variable: ${varName}`);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    } else {
+      console.warn('⚠️  Continuing in development mode with reduced functionality');
+    }
+  }
+});
+
 const PORT = process.env.PORT || 5000;
-
-// Configure allowed origins
-const allowedOrigins = [
-  process.env.CLIENT_URLS, 
-  "http://localhost:5173",
-  "https://*.app.github.dev", // Wildcard for all GitHub Codespaces
-  "https://*.github.dev" // Additional GitHub domain
-].filter(Boolean);
-
-console.log("🌍 Allowed Origins:", allowedOrigins);
 
 // Create Express app
 const app = express();
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
 // =====================
 // SECURITY MIDDLEWARE
 // =====================
+if (process.env.CODESPACES === 'true') {
+  app.set('trust proxy', 1); // Trust Codespaces proxy
+}
+
+// Apply middleware
+app.options('*', corsPreflight); // Preflight first
+app.use(corsMiddleware);
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
-
-// =====================
-// CORS CONFIGURATION
-// =====================
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow all GitHub Codespaces origins
-    if (origin && (origin.includes('.app.github.dev') || origin.includes('.github.dev'))) {
-      return callback(null, true);
-    }
-    
-    // Allow requests with no origin (like mobile apps or Postman)
-    if (!origin && process.env.NODE_ENV === 'development') {
-      return callback(null, true);
-    }
-    
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`🚨 CORS Blocked: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  maxAge: 86400
-};
-
-// Use only ONE CORS middleware
-app.use(cors(corsOptions));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log('Incoming Headers:', req.headers);
-  console.log('Request Origin:', req.get('origin'));
-  next();
-});
+app.use(requestLogger);
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // =====================
 // ROUTES
@@ -104,25 +87,20 @@ app.get("/", (req, res) => {
 // ERROR HANDLING
 // =====================
 app.use((err, req, res, next) => {
-  console.error("🔥 Error:", err.stack);
+  console.error("🔥 Error:", err.message);
   
-  const statusCode = err.message.includes("CORS") ? 403 : 500;
+  const statusCode = err.statusCode || (err.message.includes("CORS") ? 403 : 500);
   const response = {
     error: statusCode === 403 ? "Forbidden" : "Internal Server Error",
-    message: err.message
+    message: err.message,
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack })
   };
-  
-  if (process.env.NODE_ENV === "production") {
-    delete response.stack;
-  } else {
-    response.stack = err.stack;
-  }
-  
+
   res.status(statusCode).json(response);
 });
 
 // =====================
-// DATABASE CONNECTION
+// SERVER INITIALIZATION
 // =====================
 const connectDB = async () => {
   try {
@@ -135,20 +113,22 @@ const connectDB = async () => {
     
     console.log("✅ MongoDB Connected");
 
-    // HTTPS configuration (only if not in GitHub Codespaces)
-    if (process.env.NODE_ENV !== 'development' && !process.env.CODESPACES) {
-      const sslOptions = {
-        key: readFileSync('key.pem'),
-        cert: readFileSync('cert.pem')
-      };
-      createServer(sslOptions, app).listen(PORT, () => {
-        console.log(`🚀 Secure server running on port ${PORT}`);
-      });
-    } else {
-      app.listen(PORT, () => {
+    const startServer = () => {
+      if (process.env.NODE_ENV === 'production' && !process.env.CODESPACES) {
+        const sslOptions = {
+          key: readFileSync(process.env.SSL_KEY_PATH || 'key.pem'),
+          cert: readFileSync(process.env.SSL_CERT_PATH || 'cert.pem')
+        };
+        return createServer(sslOptions, app).listen(PORT, () => {
+          console.log(`🚀 Secure server running on port ${PORT}`);
+        });
+      }
+      return app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`);
       });
-    }
+    };
+
+    startServer();
     
   } catch (err) {
     console.error("❌ MongoDB Connection Failed:", err.message);
@@ -157,3 +137,12 @@ const connectDB = async () => {
 };
 
 connectDB();
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed');
+    process.exit(0);
+  });
+});

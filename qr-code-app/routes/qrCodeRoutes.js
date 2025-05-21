@@ -1,6 +1,6 @@
 import express from "express";
 import multer from "multer";
-import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import { authenticateUser } from "../middleware/authMiddleware.js"; 
 import generateQRCode from "../services/qrCodeService.js";
 import QRCode from "../models/QrCode.js";
 
@@ -12,7 +12,7 @@ const upload = multer({ dest: "uploads/" }); // Multer configuration for file up
  * @desc Generate a new QR Code
  * @access Private (Requires Authentication)
  */
-router.post("/generate", protect, upload.single("logo"), async (req, res) => {
+router.post("/generate", authenticateUser, upload.single("logo"), async (req, res) => {
   try {
     const { data, color } = req.body;
     const logoUrl = req.file ? req.file.path : ""; // Check if file is uploaded
@@ -45,7 +45,7 @@ router.post("/generate", protect, upload.single("logo"), async (req, res) => {
  * @desc Get all QR Codes for the authenticated user
  * @access Private (Requires Authentication)
  */
-router.get("/", protect, async (req, res) => {
+router.get("/", authenticateUser, async (req, res) => {
   try {
     const qrCodes = await QRCode.find({ userId: req.user._id });
     res.json(qrCodes);
@@ -60,7 +60,7 @@ router.get("/", protect, async (req, res) => {
  * @desc Delete a QR Code by ID
  * @access Private (Requires Authentication)
  */
-router.delete("/:id", protect, async (req, res) => {
+router.delete("/:id", authenticateUser, async (req, res) => {
   try {
     const qrCode = await QRCode.findById(req.params.id);
     if (!qrCode) return res.status(404).json({ message: "QR Code not found" });

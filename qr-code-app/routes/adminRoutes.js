@@ -1,12 +1,12 @@
 import express from "express";
 import User from "../models/User.js";
 import QrCode from "../models/QrCode.js";
-import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import { authenticateUser,adminOnly } from "../middleware/authMiddleware.js"; 
 
 const router = express.Router();
 
 // 🔹 Get all users (Admin only)
-router.get("/users", protect, adminOnly, async (req, res) => {
+router.get("/users", authenticateUser, adminOnly, async (req, res) => {
     try {
         const users = await User.find({});
         res.json(users);
@@ -16,7 +16,7 @@ router.get("/users", protect, adminOnly, async (req, res) => {
 });
 
 // 🔹 Delete a user (Admin only)
-router.delete("/users/:id", protect, adminOnly, async (req, res) => {
+router.delete("/users/:id", authenticateUser, adminOnly, async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: "User deleted successfully" });
@@ -26,7 +26,7 @@ router.delete("/users/:id", protect, adminOnly, async (req, res) => {
 });
 
 // 🔹 Promote user to admin (Admin only)
-router.put("/users/:id/promote", protect, adminOnly, async (req, res) => {
+router.put("/users/:id/promote", authenticateUser, adminOnly, async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) return res.status(404).json({ message: "User not found" });
@@ -45,7 +45,7 @@ router.put("/users/:id/promote", protect, adminOnly, async (req, res) => {
 
 
 // 🔹 Get all QR codes (Admin only)
-router.get("/qrcodes", protect, adminOnly, async (req, res) => {
+router.get("/qrcodes", authenticateUser, adminOnly, async (req, res) => {
     try {
         const qrCodes = await QrCode.find().populate("createdBy", "username email");
         res.json(qrCodes);
@@ -55,7 +55,7 @@ router.get("/qrcodes", protect, adminOnly, async (req, res) => {
 });
 
 // 🔹 Delete a QR code (Admin only)
-router.delete("/qrcodes/:id", protect, adminOnly, async (req, res) => {
+router.delete("/qrcodes/:id", authenticateUser, adminOnly, async (req, res) => {
     try {
         await QrCode.findByIdAndDelete(req.params.id);
         res.json({ message: "QR Code deleted successfully" });

@@ -1,5 +1,5 @@
 import express from "express";
-import {protect,adminOnly} from "../middleware/authMiddleware.js";
+import { authenticateUser } from "../middleware/authMiddleware.js";
 import { initiateStkPush } from "../services/mpesaService.js";
 // import { createStripePayment } from "../services/stripeService.js";
 import axios from "axios";
@@ -11,7 +11,7 @@ import Subscription from "../models/Subscription.js";
 const router = express.Router();
 
 // Subscribe via M-Pesa
-router.post("/mpesa", protect, async (req, res) => {
+router.post("/mpesa", authenticateUser, async (req, res) => {
   try {
     const { phone, amount, plan } = req.body;
     const response = await initiateStkPush(phone, amount);
@@ -37,7 +37,7 @@ router.post("/mpesa", protect, async (req, res) => {
 
 // Subscribe via Stripe
 /*
-router.post("/stripe", authMiddleware.protect, async (req, res) => {
+router.post("/stripe", authMiddleware.authenticateUser, async (req, res) => {
   try {
     const { amount, plan } = req.body;
     const sessionUrl = await createStripePayment(amount, req.user.email);
@@ -50,7 +50,7 @@ router.post("/stripe", authMiddleware.protect, async (req, res) => {
 */
 
 // Subscribe via Flutterwave
-router.post("/flutterwave", protect, async (req, res) => {
+router.post("/flutterwave", authenticateUser, async (req, res) => {
   try {
     const { amount, plan, phone } = req.body;
     const paymentLink = await initiateFlutterwavePayment(amount, req.user.email, phone);

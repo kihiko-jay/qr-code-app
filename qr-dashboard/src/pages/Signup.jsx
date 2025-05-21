@@ -6,50 +6,64 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     username: "",
     email: "",
-    password: ""
+    password: "",
+    role: "user" // Default role
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-   console.log(apiUrl);
-   console.log(import.meta.env); 
-   
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     
+    // Enhanced validation
     if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim()) {
       setError("All fields are required");
       return;
     }
     
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError("Please enter a valid email address");
       return;
     }
 
     setLoading(true);
     
-    try {console.log(apiUrl)
+    try {
       const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({
           username: formData.username.trim(),
           email: formData.email.trim().toLowerCase(),
           password: formData.password.trim(),
-          role: "paid"
+          role: formData.role
         }),
-        credentials:"include" //important for cookies
+        credentials: "include",
+        mode: "cors"
       });
 
       const data = await response.json();
-      
-      if (!response.ok) throw new Error(data.message || "Registration failed");
+      if (!response.ok) {
+        throw new Error(
+          data.message || 
+          (data.code === "USER_EXISTS" ? "Email or username already exists" : "Registration failed")
+        );
+      }
 
-      alert("Registration successful! Please login.");
-      navigate("/login");
+      // Store token and redirect
+      localStorage.setItem('token', data.token);
+      navigate("/dashboard");
     } catch (error) {
       console.error("Signup error:", error);
       setError(error.message || "Signup failed. Please try again.");
@@ -85,6 +99,7 @@ const Signup = () => {
                 value={formData.username}
                 onChange={handleChange}
                 required
+                minLength={3}
                 disabled={loading}
               />
             </div>
@@ -111,9 +126,24 @@ const Signup = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                minLength={6}
+                minLength={8}
                 disabled={loading}
               />
+              <small className={styles.hint}>Minimum 8 characters</small>
+            </div>
+            
+            <div className={styles.inputGroup}>
+              <label className={styles.label}>Account Type</label>
+              <select
+                name="role"
+                className={styles.input}
+                value={formData.role}
+                onChange={handleChange}
+                disabled={loading}
+              >
+                <option value="user">Standard User</option>
+                <option value="paid">Premium User</option>
+              </select>
             </div>
             
             <button 
