@@ -3,70 +3,74 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import styles from "../styles/auth.module.css";
 
-// Constants
+import Dashboard from "../components/Dashboard";
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_TIME = 300000; // 5 minutes in milliseconds
+const LOCKOUT_TIME = 300000; // 5 minutes
 const API_TIMEOUT = 15000; // 15 seconds
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Login = () => {
-  const [credentials, setCredentials] = useState({ 
-    email: "", 
-    password: "" 
-  });
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [timeoutActive, setTimeoutActive] = useState(false);
   const [remainingTime, setRemainingTime] = useState(0);
+
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check for existing token on initial render
+  // Redirect if already logged in
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
+    const token =
+      localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
     if (token) {
-      navigate(location.state?.from || "/combinedQrGenerator", { replace: true });
+      navigate(location.state?.from || "/Dashboard", { replace: true });
     }
   }, [navigate, location]);
 
-  // Reset error when inputs change
+  // Clear error on input change
   useEffect(() => {
     if (error && (credentials.email || credentials.password)) {
       setError("");
     }
-  }, [credentials.email, credentials.password]);
+  }, [credentials.email, credentials.password, error]);
 
-  // Handle lockout timeout
+  // Lockout timer
   useEffect(() => {
     let timer;
     if (attempts >= MAX_ATTEMPTS) {
       setTimeoutActive(true);
-      let timeLeft = LOCKOUT_TIME / 1000; // Convert to seconds
-      
+      let timeLeft = LOCKOUT_TIME / 1000;
+
       timer = setInterval(() => {
         timeLeft -= 1;
         setRemainingTime(timeLeft);
-        
+
         if (timeLeft <= 0) {
           clearInterval(timer);
           setAttempts(0);
           setTimeoutActive(false);
+          setRemainingTime(0);
         }
       }, 1000);
     }
-    
     return () => clearInterval(timer);
   }, [attempts]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setCredentials(prev => ({
-      ...prev,
-      [name]: name === "password" ? value : value.trim()
-    }));
+    const { name, value, type, checked } = e.target;
+    if (name === "rememberMe") {
+      setRememberMe(checked);
+    } else {
+      setCredentials((prev) => ({
+        ...prev,
+        [name]: name === "password" ? value : value.trim(),
+      }));
+    }
   };
 
   const validateForm = () => {
@@ -74,32 +78,30 @@ const Login = () => {
       setError("Both email and password are required");
       return false;
     }
-
     if (!EMAIL_REGEX.test(credentials.email)) {
       setError("Please enter a valid email address");
       return false;
     }
-
     if (credentials.password.length < MIN_PASSWORD_LENGTH) {
       setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
       return false;
     }
-
     return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm() || timeoutActive) return;
 
     setLoading(true);
-    
-    try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 
-                    process.env.REACT_APP_API_BASE_URL || 
-                    'http://localhost:5000';
 
+    try {
+      const apiUrl =
+        import.meta.env.VITE_API_BASE_URL ||
+        process.env.REACT_APP_API_BASE_URL ||
+        "http://localhost:5000";
+        
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
@@ -108,40 +110,55 @@ const Login = () => {
         {
           email: credentials.email.toLowerCase(),
           password: credentials.password,
+          
         },
         {
-          headers: { 
-            "Content-Type": "application/json",
-          },
-          signal: controller.signal
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
         }
       );
 
+     
       clearTimeout(timeoutId);
 
       if (!response.data?.token) {
         throw new Error("Authentication failed: No token received");
       }
 
-      // Store authentication data consistently
-      localStorage.setItem("authToken", response.data.token);
-      if (response.data.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+      // Store token according to "remember me"
+      if (rememberMe) {
+        localStorage.setItem("authToken", response.data.token);
+        if (response.data.user) {
+          localStorage.setItem("user", JSON.stringify(response.data.user));
+        }
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("user");
+      } else {
+        sessionStorage.setItem("authToken", response.data.token);
+        if (response.data.user) {
+          sessionStorage.setItem("user", JSON.stringify(response.data.user));
+        }
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
       }
 
-      // Redirect to intended location or default page
+      setAttempts(0); // Reset attempts on success
+      setError("");
       navigate(location.state?.from || "/combinedQrGenerator", { replace: true });
-
     } catch (error) {
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
 
       let errorMessage = "Login failed. Please try again.";
-      
+
       if (error.response) {
-        // Handle specific error codes from backend
         switch (error.response.data?.code) {
           case "INVALID_CREDENTIALS":
+            console.log(
+              "🚀 Login attempt with email:",
+              credentials.email,
+              credentials.password,
+            );
             errorMessage = "Invalid email or password";
             break;
           case "ACCOUNT_LOCKED":
@@ -157,17 +174,20 @@ const Login = () => {
       }
 
       console.error("Login error:", error);
-      setError(`${errorMessage} ${newAttempts < MAX_ATTEMPTS ? `(Attempt ${newAttempts}/${MAX_ATTEMPTS})` : ""}`);
+      setError(
+        `${errorMessage} ${
+          newAttempts < MAX_ATTEMPTS ? `(Attempt ${newAttempts}/${MAX_ATTEMPTS})` : ""
+        }`
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Format remaining lockout time
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
   return (
@@ -175,14 +195,13 @@ const Login = () => {
       <div className={styles.container}>
         <div className={styles.qrPattern} style={{ top: "20%", left: "10%" }} />
         <div className={styles.qrPattern} style={{ bottom: "15%", right: "12%" }} />
-        
+
         <div className={styles.card}>
           <h2 className={styles.title}>Welcome Back</h2>
-          
+
           {error && (
             <div className={styles.error} role="alert">
-              <span className={styles.errorIcon}>⚠️</span>
-              {error}
+              <span className={styles.errorIcon}>⚠️</span> {error}
               {timeoutActive && (
                 <div className={styles.lockoutWarning}>
                   Account locked. Try again in {formatTime(remainingTime)}
@@ -190,7 +209,7 @@ const Login = () => {
               )}
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
             <div className={styles.inputGroup}>
               <label htmlFor="email" className={styles.label}>
@@ -234,7 +253,7 @@ const Login = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   disabled={loading || timeoutActive}
-                  tabIndex={-1} // Prevent tab focus on this button
+                  tabIndex={-1}
                 >
                   {showPassword ? "👁️" : "🔒"}
                 </button>
@@ -244,9 +263,23 @@ const Login = () => {
               </small>
             </div>
 
-            <button 
-              type="submit" 
-              className={styles.button} 
+            <div className={styles.checkboxGroup}>
+              <input
+                type="checkbox"
+                id="rememberMe"
+                name="rememberMe"
+                checked={rememberMe}
+                onChange={handleChange}
+                disabled={loading || timeoutActive}
+              />
+              <label htmlFor="rememberMe" className={styles.checkboxLabel}>
+                Remember me
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className={styles.button}
               disabled={loading || timeoutActive || attempts >= MAX_ATTEMPTS}
               aria-busy={loading}
             >
@@ -255,7 +288,9 @@ const Login = () => {
                   <span className={styles.spinner} aria-hidden="true" />
                   Signing In...
                 </>
-              ) : "Sign In"}
+              ) : (
+                "Sign In"
+              )}
             </button>
           </form>
 
@@ -263,7 +298,7 @@ const Login = () => {
             <Link to="/signup" className={styles.link}>
               Don't have an account? Create one
             </Link>
-            
+
             <Link to="/forgot-password" className={styles.link}>
               Forgot Password?
             </Link>

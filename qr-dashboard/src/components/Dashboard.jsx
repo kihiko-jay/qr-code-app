@@ -49,7 +49,7 @@ const Dashboard = () => {
 
   const fetchUser = useCallback(async () => {
     try {
-      const token = sessionStorage.getItem("token");
+      const token = sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
       if (!token) {
         navigate("/login");
         return;

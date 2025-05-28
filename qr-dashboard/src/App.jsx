@@ -1,95 +1,106 @@
-// App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import HomePage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./components/Dashboard";
 import PaymentPage from "./components/PaymentPage";
 import Header from "./components/Header";
-import QrGenerator from "./components/QrGenerator";
 import MyQrCodes from "./components/MyQrCodes";
 import AdminUsers from "./pages/AdminUsers";
 import AdminQrCodes from "./pages/AdminQrCodes";
 import PremiumDashboard from "./pages/PremiumDashboard";
-
+import CombinedQrGenerator from "./components/CombinedQrGenerator";
 import PremiumQRGenerator from "./components/PremiumQRGenerator";
+import DashboardHome from "./components/Dashboard";
 
-// Enhanced PrivateRoute component
+// Enhanced auth helper with error handling
+const getAuth = () => {
+  try {
+    const token = sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
+    const userString = sessionStorage.getItem("user") || localStorage.getItem("user");
+    const user = userString ? JSON.parse(userString) : null;
+    return { token, user: user?.id ? user : null };
+  } catch (error) {
+    console.error("Authentication parsing error:", error);
+    return { token: null, user: null };
+  }
+};
+
+// Route guards
+const PublicRoute = ({ children }) => {
+  const { token } = getAuth();
+  return token ? <Navigate to="/dashboard" replace /> : children;
+};
+
 const PrivateRoute = ({ children }) => {
-  const token = sessionStorage.getItem('token');
+  const { token } = getAuth();
   return token ? children : <Navigate to="/login" replace />;
 };
 
-// PremiumRoute component (new)
 const PremiumRoute = ({ children }) => {
-  const user = JSON.parse(sessionStorage.getItem('user'));
-  if (!user) return <Navigate to="/login" replace />;
-  if (!user.isPremium) return <Navigate to="/payment" replace />;
-  return children;
+  const { token, user } = getAuth();
+  if (!token) return <Navigate to="/login" replace />;
+  return user?.isPremium ? children : <Navigate to="/payment" replace />;
 };
 
-// Admin route component
-const AdminRoute = ({ children }) => {
-  const user = JSON.parse(sessionStorage.getItem('user'));
-  return user?.role === 'admin' ? children : <Navigate to="/dashboard" replace />;
-};
-
-function App() {
+const App = () => {
   return (
     <Router>
       <Header />
       <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/payment" element={<PaymentPage />} />
-        <Route path="/dashboard/premium" element={<PremiumDashboard />} />
-        <Route path="/dashboard/premiumqrgenerator" element={<PremiumQRGenerator />} />
-        <Route path="generate" element={<QrGenerator />} />
-        <Route path="qr-generator" element={<PremiumQRGenerator />} />
-        {/* Protected dashboard routes */}
+        {/* Public Routes */}
+        <Route path="/" element={<PublicRoute><HomePage /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+
+        {/* Main Dashboard Layout */}
         <Route path="/dashboard" element={
           <PrivateRoute>
             <Dashboard />
           </PrivateRoute>
         }>
-          <Route index element={
-            <>
-              <QrGenerator />
-              <MyQrCodes />
-            </>
-          } />
-          
-         
+          <Route index element={<DashboardHome />} />
+          <Route path="combinedQrGenerator" element={<CombinedQrGenerator />} />
           <Route path="my-qrcodes" element={<MyQrCodes />} />
+          
+          {/* Admin Subroutes */}
+          <Route path="admin/users" element={
+            <PrivateRoute>
+              <AdminUsers />
+            </PrivateRoute>
+          }/>
+          <Route path="admin/qrcodes" element={
+            <PrivateRoute>
+              <AdminQrCodes />
+            </PrivateRoute>
+          }/>
         </Route>
 
-        {/* Premium routes */}
+        {/* Payment Gateway */}
+        <Route path="/payment" element={
+          <PrivateRoute>
+            <PaymentPage />
+          </PrivateRoute>
+        }/>
+
+        {/* Premium Features */}
         <Route path="/premium" element={
           <PremiumRoute>
             <PremiumDashboard />
           </PremiumRoute>
-        }>
-          <Route index element={<PremiumDashboard />} />
-          <Route path="qr-generator" element={<PremiumQRGenerator />} />
-        </Route>
+        }/>
+        <Route path="/premiumQr" element={
+          <PremiumRoute>
+            <PremiumQRGenerator />
+          </PremiumRoute>
+        }/>
 
-        {/* Admin protected routes */}
-        <Route path="/admin" element={
-          <AdminRoute>
-            <Dashboard />
-          </AdminRoute>
-        }>
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="qrcodes" element={<AdminQrCodes />} />
-        </Route>
-
-        {/* 404 catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Error Handling */}
+        <Route path="/404" element={<div>Page Not Found</div>} />
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
     </Router>
   );
-}
+};
 
 export default App;

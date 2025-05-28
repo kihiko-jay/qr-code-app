@@ -11,7 +11,7 @@ dotenv.config();
 
 const router = express.Router();
 
-// Rate limiting middleware
+// Rate Limiting Middleware
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -23,38 +23,38 @@ const authLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Check required env vars
-['JWT_SECRET', 'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER', 'EMAIL_PASS', 'CLIENT_URL']
-  .forEach(key => {
-    if (!process.env[key]) {
-      console.error(`❌ Missing ${key} in .env`);
-      process.exit(1);
-    }
-  });
+// Validate required ENV variables
+[
+  'JWT_SECRET', 'EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USER',
+  'EMAIL_PASS', 'CLIENT_URL'
+].forEach(key => {
+  if (!process.env[key]) {
+    console.error(`❌ Missing ${key} in .env`);
+    process.exit(1);
+  }
+});
 
-// Setup email transporter
+// Setup Nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: parseInt(process.env.EMAIL_PORT),
-  secure: true,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
 });
 
-// Helpers
+// Helper Functions
 const generateToken = (userId, role) => {
   return jwt.sign({ id: userId, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '7d'
   });
 };
 
-const generateEmailToken = () => {
-  return crypto.randomBytes(20).toString('hex');
-};
+const generateEmailToken = () => crypto.randomBytes(20).toString('hex');
 
-// Routes
+// ---------------- ROUTES ----------------
 
 // @route   POST /api/auth/register
 router.post('/register', authLimiter, async (req, res) => {
@@ -91,7 +91,7 @@ router.post('/register', authLimiter, async (req, res) => {
     const user = new User({
       username,
       email,
-      password: hashedPassword,
+      password: password,
       role,
       emailVerificationToken: emailToken,
       emailVerified: false
@@ -100,7 +100,6 @@ router.post('/register', authLimiter, async (req, res) => {
     await user.save();
 
     const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${emailToken}`;
-
     await transporter.sendMail({
       from: `"${process.env.EMAIL_SENDER_NAME}" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -130,7 +129,7 @@ router.post('/register', authLimiter, async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Registration error:", err);
     res.status(500).json({ message: "Server error", code: "SERVER_ERROR" });
   }
 });
@@ -139,6 +138,7 @@ router.post('/register', authLimiter, async (req, res) => {
 router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log("🔐 Login attempt:", email);
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required", code: "MISSING_FIELDS" });
@@ -146,12 +146,14 @@ router.post('/login', authLimiter, async (req, res) => {
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      return res.status(404).json({ message: "User not found", code: "USER_NOT_FOUND" });
+      console.log("❌ User not found");
+      return res.status(401).json({ message: 'Invalid credentials', code: 'INVALID_CREDENTIALS' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials", code: "INVALID_CREDENTIALS" });
+      console.log("❌ Password mismatch");
+      return res.status(401).json({ message: 'Invalid credentials', code: 'INVALID_CREDENTIALS' });
     }
 
     const token = generateToken(user._id, user.role);
@@ -162,8 +164,9 @@ router.post('/login', authLimiter, async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
+    console.log("✅ Login successful:", email);
     res.status(200).json({
-      message: "Login successful",
+      message: 'Login successful',
       token,
       user: {
         id: user._id,
@@ -176,8 +179,8 @@ router.post('/login', authLimiter, async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Login failed", code: "SERVER_ERROR" });
+    console.error("❌ Login error:", err);
+    res.status(500).json({ message: "Server error", code: "SERVER_ERROR" });
   }
 });
 
@@ -196,7 +199,7 @@ router.get('/verify-email', async (req, res) => {
 
     res.status(200).json({ message: "Email verified successfully", code: "EMAIL_VERIFIED" });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Email verification error:", err);
     res.status(500).json({ message: "Verification failed", code: "SERVER_ERROR" });
   }
 });

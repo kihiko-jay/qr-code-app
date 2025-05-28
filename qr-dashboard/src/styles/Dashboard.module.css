@@ -116,5 +116,41 @@
     padding-top: 4rem;
   }
 }
+/* Add to your Dashboard.module.css */
+.mainContent {
+  flex-grow: 1;
+  padding: 2rem;
+  margin-left: 280px; /* Match sidebar width */
+  min-height: 100vh;
+}
 
+.contentArea {
+  background: var(--dark-800);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+/* Mobile fix */
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+    width: 100%;
+    padding: 1rem;
+  }
+  
+  .sidebar {
+    width: 100%;
+    position: fixed;
+    z-index: 1000;
+  }
+}
 /* Rest of your existing CSS styles remain the same */
